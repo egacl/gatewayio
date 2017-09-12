@@ -75,7 +75,7 @@ public interface INetworkService {
      * @param handler
      *            Network event handler.
      */
-    void addNetworkEventHandler(INetworkEventListener handler);
+    void addNetworkEventListener(INetworkEventListener handler);
 
     /**
      * Deregister a network event handler.
@@ -84,7 +84,7 @@ public interface INetworkService {
      *            Network event handler.
      * @return Return <code>true</code> if handler was removed.
      */
-    boolean removeNetworkEventHandler(INetworkEventListener handler);
+    boolean removeNetworkEventListener(INetworkEventListener handler);
 
     /**
      * Verify if exists any handler for an event.

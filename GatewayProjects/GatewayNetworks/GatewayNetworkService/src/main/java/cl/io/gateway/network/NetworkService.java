@@ -59,7 +59,7 @@ public class NetworkService implements INetworkService {
     /**
      * List that contains network event listener to notify java application
      */
-    private final List<INetworkEventListener> networkEventsHandlerList;
+    private final List<INetworkEventListener> networkEventsListenerList;
 
     /**
      * Network driver instance for low level protocol operations
@@ -81,7 +81,7 @@ public class NetworkService implements INetworkService {
         this.bossGroup = bossGroup;
         this.workerGroup = workerGroup;
         this.messagesHandlerMap = new ConcurrentHashMap<>(50, 0.5F);
-        this.networkEventsHandlerList = new ArrayList<>(50);
+        this.networkEventsListenerList = new ArrayList<>(50);
     }
 
     private INetworkService initialice() throws Exception {
@@ -129,16 +129,16 @@ public class NetworkService implements INetworkService {
     }
 
     @Override
-    public void addNetworkEventHandler(INetworkEventListener handler) {
-        synchronized (this.networkEventsHandlerList) {
-            this.networkEventsHandlerList.add(handler);
+    public void addNetworkEventListener(INetworkEventListener listener) {
+        synchronized (this.networkEventsListenerList) {
+            this.networkEventsListenerList.add(listener);
         }
     }
 
     @Override
-    public boolean removeNetworkEventHandler(INetworkEventListener handler) {
-        synchronized (this.networkEventsHandlerList) {
-            return this.networkEventsHandlerList.remove(handler);
+    public boolean removeNetworkEventListener(INetworkEventListener listener) {
+        synchronized (this.networkEventsListenerList) {
+            return this.networkEventsListenerList.remove(listener);
         }
     }
 
@@ -192,8 +192,8 @@ public class NetworkService implements INetworkService {
     }
 
     private void broadcastNetworkEvent(final NetworkEvent event) {
-        synchronized (this.networkEventsHandlerList) {
-            for (final INetworkEventListener eventHandler : this.networkEventsHandlerList) {
+        synchronized (this.networkEventsListenerList) {
+            for (final INetworkEventListener eventHandler : this.networkEventsListenerList) {
                 try {
                     eventHandler.onEvent(event);
                 } catch (Throwable err) {

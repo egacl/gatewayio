@@ -185,13 +185,13 @@ public class NetworkServiceManager implements IGatewayNetworkService, IAuthentic
     }
 
     @Override
-    public void addNetworkEventHandler(final INetworkEventListener handler) {
-        this.networkService.addNetworkEventHandler(handler);
+    public void addNetworkEventListener(final INetworkEventListener handler) {
+        this.networkService.addNetworkEventListener(handler);
     }
 
     @Override
-    public boolean removeNetworkEventHandler(final INetworkEventListener handler) {
-        return this.networkService.removeNetworkEventHandler(handler);
+    public boolean removeNetworkEventListener(final INetworkEventListener handler) {
+        return this.networkService.removeNetworkEventListener(handler);
     }
 
     private <T> void processNetworkMessage(final NetworkMessage<T> message) throws Exception {

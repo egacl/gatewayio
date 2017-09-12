@@ -48,17 +48,17 @@ public interface IAuthenticationGatewayNetworkService extends IGatewayNetworkSer
      * the network service.
      *
      * @param handler
-     *            handler instance
+     *            listener instance
      */
-    void addNetworkEventHandler(INetworkEventListener handler);
+    void addNetworkEventListener(INetworkEventListener handler);
 
     /**
      * This method allows you to remove a network connection status handler directly
      * to the network service.
      *
      * @param handler
-     *            handler instance
-     * @return true if the handler was removed
+     *            listener instance
+     * @return true if the listener was removed
      */
-    boolean removeNetworkEventHandler(INetworkEventListener handler);
+    boolean removeNetworkEventListener(INetworkEventListener handler);
 }

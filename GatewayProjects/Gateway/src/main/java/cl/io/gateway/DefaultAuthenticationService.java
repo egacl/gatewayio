@@ -28,7 +28,7 @@ public class DefaultAuthenticationService implements IAuthenticationService {
     @Override
     public void initialize(final IGateway gateway, final IAuthenticationGatewayNetworkService netService)
             throws Exception {
-        netService.addNetworkEventHandler(new INetworkEventListener() {
+        netService.addNetworkEventListener(new INetworkEventListener() {
 
             @Override
             public void onEvent(NetworkEvent event) {
