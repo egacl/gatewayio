@@ -14,6 +14,10 @@
 		<maven.compiler.target>1.8</maven.compiler.target>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 		<!--
+		'gateway.common.lib' property defines the directory where the base libraries of the 
+		gateway framework are copied, which are part of the 'common_lib' directory within $GATEWAYIO_HOME 
+		 -->
+		<!--
 		<gateway.common.lib>/Users/egacl/programacion/personal/Gateway2/GatewayProjects/common_lib</gateway.common.lib>
 		-->
 		<gateway.common.lib>/opt/gatewayio_home/common_lib</gateway.common.lib>
