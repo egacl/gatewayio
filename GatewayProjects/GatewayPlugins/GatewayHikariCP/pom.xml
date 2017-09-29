@@ -1,37 +1,19 @@
-<?xml version="1.0" encoding="UTF-8"?>
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
 	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
 	<modelVersion>4.0.0</modelVersion>
-	<groupId>cl.io.gateway.example</groupId>
-	<version>1.0-SNAPSHOT</version>
-	<artifactId>GatewayExample</artifactId>
-	<packaging>jar</packaging>
+	<parent>
+		<groupId>cl.io.gateway.plugins</groupId>
+		<artifactId>GatewayPlugins</artifactId>
+		<version>1.0-SNAPSHOT</version>
+	</parent>
+	<artifactId>GatewayHikariCP</artifactId>
 
 	<dependencies>
 		<dependency>
-			<groupId>cl.io.gateway</groupId>
-			<artifactId>GatewayNetworkService</artifactId>
-			<version>${project.version}</version>
-			<scope>provided</scope>
+			<groupId>com.zaxxer</groupId>
+			<artifactId>HikariCP</artifactId>
+			<version>2.7.1</version>
 		</dependency>
-		<dependency>
-			<groupId>cl.io.gateway</groupId>
-			<artifactId>WebSocketDriver</artifactId>
-			<version>${project.version}</version>
-			<scope>provided</scope>
-		</dependency>
-		<dependency>
-			<groupId>cl.io.gateway</groupId>
-			<artifactId>IGateway</artifactId>
-			<version>${project.version}</version>
-			<scope>provided</scope>
-		</dependency>
-		<dependency>
-            <groupId>cl.io.gateway.plugins</groupId>
-            <artifactId>GatewayHikariCP</artifactId>
-            <version>${project.version}</version>
-            <scope>provided</scope>
-        </dependency>
 	</dependencies>
 
 	<build>
@@ -54,9 +36,8 @@
 					<descriptorRefs>
 						<descriptorRef>jar-with-dependencies</descriptorRef>
 					</descriptorRefs>
-					<!-- 
-					<archive> <manifest> <mainClass>com.mkyong.core.utils.App</mainClass> </manifest> </archive> 
-					-->
+					<!-- <archive> <manifest> <mainClass>com.mkyong.core.utils.App</mainClass> 
+						</manifest> </archive> -->
 				</configuration>
 				<executions>
 					<execution>

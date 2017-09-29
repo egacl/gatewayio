@@ -15,17 +15,20 @@
  */
 package cl.io.gateway;
 
+import java.io.IOException;
+
 import cl.io.gateway.exception.GatewayProcessException;
 import cl.io.gateway.messaging.IGatewayMessageHandler;
 import cl.io.gateway.messaging.NetworkServiceSource;
 import cl.io.gateway.network.NetworkMessage;
 import cl.io.gateway.network.driver.exception.NetworkDriverException;
+import cl.io.gateway.properties.XProperties;
 
 /**
  * Interface that allows gateway services to perform network operations, answer
  * and respond to messages, access plugins and other functionality of the
  * framework.
- * 
+ *
  * @author egacl
  *
  */
@@ -37,4 +40,8 @@ public interface IGateway {
 
     <T> void sendMessage(IGatewayClientSession client, NetworkMessage<T> message, NetworkServiceSource... origin)
             throws NetworkDriverException;
+
+    XProperties getProperties(String propertyFileName) throws IOException;
+
+    <T> T getPlugin(String pluginId, Class<T> pluginType);
 }

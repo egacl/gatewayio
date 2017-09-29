@@ -19,9 +19,11 @@ import java.net.URL;
 import java.net.URLClassLoader;
 import java.util.List;
 
-class CustomClassLoader extends ClassLoader {
+import cl.io.gateway.classloader.GatewayClassLoader;
 
-    private final String serviceId;
+class CustomClassLoader extends ClassLoader implements GatewayClassLoader {
+
+    private final String contextId;
 
     private final String mainPath;
 
@@ -31,33 +33,43 @@ class CustomClassLoader extends ClassLoader {
 
     private final ChildClassLoader childClassLoader;
 
-    public CustomClassLoader(String serviceId, String mainPath, String libsPath, String propsPath, List<URL> classpath,
-            ClassLoader parentClassLoader) {
+    public CustomClassLoader(String contextId, String mainPath, String libsPath, String propsPath, List<URL> classpath,
+            ClassLoader parentClassLoader, GatewayResourcesLoader grl) {
         super(parentClassLoader);
-        this.serviceId = serviceId;
+        this.contextId = contextId;
         this.mainPath = mainPath;
         this.libsPath = libsPath;
         this.propsPath = propsPath;
         URL[] urls = classpath.toArray(new URL[classpath.size()]);
-        childClassLoader = new ChildClassLoader(urls, new DetectClass(this.getParent()));
+        childClassLoader = new ChildClassLoader(urls, new DetectClass(parentClassLoader), grl);
     }
 
-    public String getServiceId() {
-        return serviceId;
+    @Override
+    public ClassLoader getClassLoader() {
+        return this;
     }
 
+    @Override
+    public String getContextId() {
+        return contextId;
+    }
+
+    @Override
     public String getMainPath() {
         return mainPath;
     }
 
+    @Override
     public String getLibsPath() {
         return libsPath;
     }
 
+    @Override
     public String getPropsPath() {
         return propsPath;
     }
 
+    @Override
     public URL[] getChildURL() {
         return this.childClassLoader.getURLs();
     }
@@ -71,12 +83,24 @@ class CustomClassLoader extends ClassLoader {
         }
     }
 
+    // @Override
+    // public synchronized Class<?> loadClass(String name) throws
+    // ClassNotFoundException {
+    // try {
+    // return childClassLoader.findClass(name);
+    // } catch (ClassNotFoundException e) {
+    // return super.loadClass(name);
+    // }
+    // }
     private static class ChildClassLoader extends URLClassLoader {
 
         private final DetectClass realParent;
 
-        public ChildClassLoader(URL[] urls, DetectClass realParent) {
+        private final GatewayResourcesLoader grl;
+
+        public ChildClassLoader(URL[] urls, DetectClass realParent, GatewayResourcesLoader grl) {
             super(urls, null);
+            this.grl = grl;
             this.realParent = realParent;
         }
 
@@ -84,12 +108,31 @@ class CustomClassLoader extends ClassLoader {
         public Class<?> findClass(String name) throws ClassNotFoundException {
             try {
                 Class<?> loaded = super.findLoadedClass(name);
-                if (loaded != null)
+                if (loaded != null) {
                     return loaded;
+                }
                 return super.findClass(name);
             } catch (ClassNotFoundException e) {
-                return realParent.loadClass(name);
+                Class<?> cls = this.findIntoPlugins(name);
+                if (cls == null) {
+                    return realParent.loadClass(name);
+                }
+                return cls;
             }
+        }
+
+        private Class<?> findIntoPlugins(String name) {
+            if (this.grl == null) {
+                return null;
+            }
+            for (ClassLoader ccl : this.grl.getPluginsCL()) {
+                try {
+                    return ccl.loadClass(name);
+                } catch (ClassNotFoundException e) {
+                    continue;
+                }
+            }
+            return null;
         }
     }
 

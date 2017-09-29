@@ -18,6 +18,7 @@ package cl.io.gateway;
 import java.io.File;
 import java.io.FileFilter;
 import java.net.URL;
+import java.util.Arrays;
 import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
@@ -28,6 +29,7 @@ import java.util.concurrent.ConcurrentMap;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import cl.io.gateway.classloader.GatewayClassLoader;
 import cl.io.gateway.exception.GatewayInitilizationException;
 
 public class GatewayResourcesLoader {
@@ -49,19 +51,19 @@ public class GatewayResourcesLoader {
 
     public ClassLoader addPluginClassLoader(String pluginId, File directory) throws Exception {
         logger.info("Getting ready to create classloader for plugin '" + pluginId + "'");
-        final CustomClassLoader ccl = this.createClassLoader(pluginId, directory);
+        final CustomClassLoader ccl = this.createClassLoader(pluginId, directory, false);
         this.pluginsClassLoaderMap.put(pluginId, ccl);
         return ccl;
     }
 
-    public ClassLoader addServiceClassLoader(String serviceId, File directory) throws Exception {
-        logger.info("Getting ready to create classloader for service '" + serviceId + "'");
-        final CustomClassLoader ccl = this.createClassLoader(serviceId, directory);
-        this.servicesClassLoaderMap.put(serviceId, ccl);
+    public ClassLoader addServiceClassLoader(String contextId, File directory) throws Exception {
+        logger.info("Getting ready to create classloader for service '" + contextId + "'");
+        CustomClassLoader ccl = this.createClassLoader(contextId, directory, true);
+        this.servicesClassLoaderMap.put(contextId, ccl);
         return ccl;
     }
 
-    private CustomClassLoader createClassLoader(String id, File directory) throws Exception {
+    private CustomClassLoader createClassLoader(String id, File directory, boolean searchIntoPlugins) throws Exception {
         String libsPath = directory.getAbsolutePath() + File.separator + LIB;
         File[] allLibs = new File(libsPath).listFiles(new FileFilter() {
 
@@ -71,21 +73,9 @@ public class GatewayResourcesLoader {
             }
         });
         String propsPath = directory.getAbsolutePath() + File.separator + PROP;
-        File[] allProperties = new File(propsPath).listFiles(new FileFilter() {
-
-            @Override
-            public boolean accept(File pathname) {
-                return pathname.isFile() && !pathname.isHidden();
-            }
-        });
         List<URL> urls = new LinkedList<URL>();
         if (allLibs != null && allLibs.length > 0) {
             for (File f : allLibs) {
-                urls.add(f.toURI().toURL());
-            }
-        }
-        if (allProperties != null && allProperties.length > 0) {
-            for (File f : allProperties) {
                 urls.add(f.toURI().toURL());
             }
         }
@@ -93,22 +83,46 @@ public class GatewayResourcesLoader {
             throw new GatewayInitilizationException("Resource '" + id + "' has any URL associated");
         }
         return new CustomClassLoader(id, directory.getAbsolutePath(), libsPath, propsPath, urls,
-                Thread.currentThread().getContextClassLoader());
+                Thread.currentThread().getContextClassLoader(), searchIntoPlugins ? this : null);
     }
 
-    public ClassLoader getServiceClassLoader(String serviceId) {
-        return this.servicesClassLoaderMap.get(serviceId);
+    public CustomClassLoader getServiceContextClassLoader(String contextId) {
+        return this.servicesClassLoaderMap.get(contextId);
     }
 
-    public boolean removeServiceClassLoader(String serviceId) {
-        return this.servicesClassLoaderMap.remove(serviceId) != null;
+    public GatewayClassLoader getPluginContextClassLoader(String contextId) {
+        return this.pluginsClassLoaderMap.get(contextId);
     }
 
-    public Set<String> getServicesId() {
+    public boolean removeServiceClassLoader(String contextId) {
+        return this.servicesClassLoaderMap.remove(contextId) != null;
+    }
+
+    public Set<String> getContextsId() {
         return new HashSet<String>(this.servicesClassLoaderMap.keySet());
     }
 
     public Set<String> getPluginsId() {
         return new HashSet<String>(this.pluginsClassLoaderMap.keySet());
+    }
+
+    public CustomClassLoader getPluginClassLoader(String pluginId) {
+        return this.pluginsClassLoaderMap.get(pluginId);
+    }
+
+    URL[] getPluginsURLs() {
+        List<URL> urls = new LinkedList<URL>();
+        for (CustomClassLoader ccl : this.pluginsClassLoaderMap.values()) {
+            urls.addAll(Arrays.asList(ccl.getChildURL()));
+        }
+        return urls.toArray(new URL[urls.size()]);
+    }
+
+    ClassLoader[] getPluginsCL() {
+        List<ClassLoader> urls = new LinkedList<ClassLoader>();
+        for (CustomClassLoader ccl : this.pluginsClassLoaderMap.values()) {
+            urls.add(ccl);
+        }
+        return urls.toArray(new ClassLoader[urls.size()]);
     }
 }

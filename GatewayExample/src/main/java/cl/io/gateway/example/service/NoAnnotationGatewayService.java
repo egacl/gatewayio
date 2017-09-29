@@ -27,7 +27,7 @@ import cl.io.gateway.service.IGatewayService;
  * Example gateway service class. You must use the @GatewayService annotation
  * and the IGatewayService interface so that the framework initializes the
  * service.
- * 
+ *
  * @author egacl
  *
  */
@@ -37,6 +37,7 @@ public class NoAnnotationGatewayService implements IGatewayService {
     @Override
     public void initialize(final IGateway gateway) {
         try {
+            System.out.println("Hello! I'm a service with out annotation for message handlers");
             // Add message handler for 'testevent2' event id
             gateway.addMessageHandler("testevent2",
                     (NetworkMessage<TestMessage> message, IGatewayClientSession session) -> {

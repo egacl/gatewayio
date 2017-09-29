@@ -53,14 +53,14 @@ public class Main {
                 "\n\n\n\n############################################\nInitializing reading resources and clases process");
         // Calling environment reader
         EnvironmentReader environmentReader = new EnvironmentReader(propertiesReader);
-        // Network authentication initalization
-        environmentReader.networkInitializer();
         // Plugins initialization
         environmentReader.pluginsInitializer();
+        // Network authentication initalization
+        environmentReader.networkInitializer();
         // Services initialization
         environmentReader.servicesAndHandlersInitializer();
         // Filters initialization
-        environmentReader.filtersInitializer();
+        // environmentReader.filtersInitializer();
         logger.info("\n\n\n\n############################################\nInitializing loading resources process");
         // Create gateway instance
         final Gateway gateway = Gateway.createInstance(environmentReader);
@@ -70,10 +70,7 @@ public class Main {
         gateway.start();
         // Block main thread
         synchronized (THREAD_LOCK) {
-            try {
-                THREAD_LOCK.wait();
-            } catch (final InterruptedException e) {
-            }
+            THREAD_LOCK.wait();
         }
     }
 }

@@ -13,13 +13,21 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package cl.io.gateway;
+package cl.io.gateway.classloader;
 
-import cl.io.gateway.service.IGatewayService;
+import java.net.URL;
 
-public class InternalService extends InternalElement<IGatewayService> {
+public interface GatewayClassLoader {
 
-    public InternalService(String contextId, Class<IGatewayService> serviceClass, String gatewayId) {
-        super(contextId, serviceClass, gatewayId);
-    }
+    String getContextId();
+
+    String getMainPath();
+
+    String getLibsPath();
+
+    String getPropsPath();
+
+    URL[] getChildURL();
+
+    ClassLoader getClassLoader();
 }

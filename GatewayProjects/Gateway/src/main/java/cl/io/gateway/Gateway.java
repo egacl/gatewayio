@@ -17,7 +17,9 @@ package cl.io.gateway;
 
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.FutureTask;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -37,6 +39,8 @@ class Gateway {
     private final Map<String, NetworkServiceManager> networkServiceManagerMap;
 
     private final EnvironmentReader environment;
+
+    private final Map<String, InternalGatewayPlugin> gatewayPluginsMap;
 
     private final Map<String, InternalGatewayService> gatewayServicesMap;
 
@@ -62,10 +66,44 @@ class Gateway {
         this.environment = environment;
         this.networkServiceManagerMap = new ConcurrentHashMap<String, NetworkServiceManager>();
         this.gatewayServicesMap = new ConcurrentHashMap<String, InternalGatewayService>();
+        this.gatewayPluginsMap = new ConcurrentHashMap<String, InternalGatewayPlugin>();
     }
 
     public void load() throws Exception {
-        // TODO Load plugins
+        // Load plugins
+        for (final InternalPlugin plugin : this.environment.getGatewayPluginsMap().values()) {
+            final FutureTask<Void> f = new FutureTask<Void>(new Callable<Void>() {
+
+                @Override
+                public Void call() throws Exception {
+                    final InternalGatewayPlugin gwPlugin = new InternalGatewayPlugin(Gateway.this, plugin);
+                    Gateway.this.gatewayPluginsMap.put(gwPlugin.getGatewayId(), gwPlugin);
+                    gwPlugin.init();
+                    return null;
+                }
+            });
+            Thread n = new Thread(new Runnable() {
+
+                @Override
+                public void run() {
+                    f.run();
+                }
+            });
+            n.setContextClassLoader(this.environment.getPropertiesInicializer().getResourcesLoader()
+                    .getPluginClassLoader(plugin.getContextId()));
+            n.setDaemon(false);
+            n.start();
+            f.get();
+        }
+        // Show all plugins
+        logger.info("\n\n\n\n\n\n====================================================================== \n"
+                + "These are all available plugins \n");
+        for (InternalGatewayPlugin plugin : this.gatewayPluginsMap.values()) {
+            InternalPlugin ip = (InternalPlugin) plugin.getElement();
+            logger.info(
+                    "\n\t>>>>>>>>>>>>>>>>>>>> Plugin id: '" + ip.getContextId() + "' -> '" + ip.getDescription() + "'");
+        }
+        logger.info("\n======================================================================\n\n\n\n\n\n");
         // Load authentication services
         for (InternalAuthenticationService auth : this.environment.getMessagingAuthServicesMap().values()) {
             NetworkServiceManager servManager = this.environment.createNetworkServiceManager(this, auth.getOrigin());
@@ -84,7 +122,7 @@ class Gateway {
         // Load services
         for (InternalService service : this.environment.getGatewayServicesMap().values()) {
             final InternalGatewayService gwService = new InternalGatewayService(this, service);
-            this.gatewayServicesMap.put(service.getGatewayServiceId(), gwService);
+            this.gatewayServicesMap.put(service.getGatewayId(), gwService);
             gwService.init();
         }
     }
@@ -95,6 +133,14 @@ class Gateway {
             logger.info("Starting " + net.getOrigin() + " network service");
             net.start();
         }
+    }
+
+    EnvironmentReader getEnvironmentReader() {
+        return this.environment;
+    }
+
+    InternalGatewayPlugin getPlugin(String pluginId) {
+        return this.gatewayPluginsMap.get(pluginId);
     }
 
     public <T> void sendMessage(IGatewayClientSession client, NetworkMessage<T> message, NetworkServiceSource... origin)

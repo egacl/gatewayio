@@ -13,13 +13,28 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package cl.io.gateway;
+package cl.io.gateway.plugin.hikaricp;
 
-import cl.io.gateway.service.IGatewayService;
+import java.util.Properties;
 
-public class InternalService extends InternalElement<IGatewayService> {
+import com.zaxxer.hikari.HikariConfig;
 
-    public InternalService(String contextId, Class<IGatewayService> serviceClass, String gatewayId) {
-        super(contextId, serviceClass, gatewayId);
+public class XHikariConfig {
+
+    private final String dsId;
+
+    private HikariConfig config;
+
+    public XHikariConfig(String dsId, Properties props) {
+        this.dsId = dsId;
+        config = new HikariConfig(props);
+    }
+
+    public String getDsId() {
+        return dsId;
+    }
+
+    public HikariConfig getConfig() {
+        return config;
     }
 }

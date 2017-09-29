@@ -15,39 +15,74 @@
  */
 package cl.io.gateway;
 
+import java.io.IOException;
 import java.lang.reflect.Method;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import cl.io.gateway.InternalElement.MethodParameterType;
+import cl.io.gateway.InternalElement.PluginField;
+import cl.io.gateway.classloader.GatewayClassLoader;
 import cl.io.gateway.exception.GatewayProcessException;
 import cl.io.gateway.messaging.GatewayMessageContext;
 import cl.io.gateway.messaging.IGatewayMessageHandler;
 import cl.io.gateway.messaging.NetworkServiceSource;
 import cl.io.gateway.network.NetworkMessage;
 import cl.io.gateway.network.driver.exception.NetworkDriverException;
+import cl.io.gateway.properties.XProperties;
 
-public class AbstractGateway<I> implements IGateway {
+public abstract class AbstractGateway<I, E extends InternalElement<I>> implements IGateway {
+
+    private static final Logger logger = LoggerFactory.getLogger(AbstractGateway.class);
 
     private final Gateway gateway;
 
-    private final String serviceId;
+    private final Map<String, InternalMessageHandler<?>> eventsHandlerMap;
 
-    private final String gatewayServiceId;
+    private final I elementInstance;
 
-    private final Map<String, InternalServiceHandler<?>> eventsHandlerMap;
+    private final InternalElement<I> element;
 
-    private final I serviceInstance;
-
-    private final Class<I> instanceClass;
-
-    public AbstractGateway(final Gateway gateway, final String serviceId, final String gatewayServiceId,
-            Class<I> instanceClass) throws Exception {
+    public AbstractGateway(final Gateway gateway, final InternalElement<I> element) throws Exception {
         this.gateway = gateway;
-        this.serviceId = serviceId;
-        this.gatewayServiceId = gatewayServiceId;
-        this.eventsHandlerMap = new ConcurrentHashMap<String, InternalServiceHandler<?>>();
-        this.instanceClass = instanceClass;
-        this.serviceInstance = this.instanceClass.newInstance();
+        this.element = element;
+        this.eventsHandlerMap = new ConcurrentHashMap<String, InternalMessageHandler<?>>();
+        this.elementInstance = this.element.getInstanceableClass().newInstance();
+    }
+
+    @SuppressWarnings({ "rawtypes", "unchecked" })
+    public void init() throws Exception {
+        if (!this.element.getEventMethodMap().isEmpty()) {
+            // Add anotated message handlers
+            for (Map.Entry<String, MethodParameterType> messageHandler : this.element.getEventMethodMap().entrySet()) {
+                // Add listener for event
+                this.gateway.addMessageHandler(
+                        messageHandler.getKey(), this.createHandler(messageHandler.getKey(),
+                                messageHandler.getValue().getParameterType(), messageHandler.getValue().getMethod()),
+                        messageHandler.getValue().getOrigins());
+            }
+        }
+        if (!this.element.getPluginFieldsList().isEmpty()) {
+            for (PluginField plugin : this.element.getPluginFieldsList()) {
+                plugin.getField().setAccessible(true);
+                // Plugin is requested to instantiate the object to inject into the field
+                plugin.getField().set(this.elementInstance,
+                        this.getPlugin(plugin.getPluginId(), plugin.getPluginFieldType()));
+            }
+        }
+    }
+
+    @Override
+    public <T> T getPlugin(String pluginId, Class<T> pluginType) {
+        InternalGatewayPlugin gwPlugin = this.gateway.getPlugin(pluginId);
+        if (gwPlugin != null) {
+            return gwPlugin.getElementInstance().getPluginInstance(pluginType);
+        }
+        logger.warn("'" + element.getGatewayId() + "' trying to invoke '" + pluginId + "' but not exists");
+        return null;
     }
 
     @Override
@@ -55,14 +90,14 @@ public class AbstractGateway<I> implements IGateway {
         if (this.eventsHandlerMap.containsKey(event)) {
             throw new GatewayProcessException("Event '" + event + "' is already associated with another handler");
         }
-        final InternalServiceHandler<T> internalHandler = new InternalServiceHandler<T>(event, handler);
+        final InternalMessageHandler<T> internalHandler = new InternalMessageHandler<T>(event, handler);
         this.eventsHandlerMap.put(event, internalHandler);
         this.gateway.addMessageHandler(event, internalHandler);
     }
 
     @Override
     public void removeMessageHandler(String event) throws GatewayProcessException {
-        final InternalServiceHandler<?> internalHandler = this.eventsHandlerMap.get(event);
+        final InternalMessageHandler<?> internalHandler = this.eventsHandlerMap.get(event);
         if (internalHandler.reflection) {
             throw new GatewayProcessException("Event '" + event + "' is associated with the method "
                     + internalHandler.method + ". It cannot be removed");
@@ -77,31 +112,49 @@ public class AbstractGateway<I> implements IGateway {
         this.gateway.sendMessage(client, message, origin);
     }
 
+    @Override
+    public XProperties getProperties(String propertyFileName) throws IOException {
+        GatewayClassLoader ccl = this.gateway.getEnvironmentReader().getPropertiesInicializer().getResourcesLoader()
+                .getServiceContextClassLoader(this.element.getContextId());
+        return XProperties.loadFromFileOrClasspath(ccl.getPropsPath(), propertyFileName,
+                this.element.getInstanceableClass());
+    }
+
+    <T> IGatewayMessageHandler<T> createHandler(final String event, final Class<T> messageType, final Method method) {
+        final InternalMessageHandler<T> internalHandler = new InternalMessageHandler<T>(event, messageType, method);
+        this.eventsHandlerMap.put(event, internalHandler);
+        return internalHandler;
+    }
+
     public Gateway getGateway() {
         return gateway;
     }
 
-    public String getServiceId() {
-        return serviceId;
+    public String getContextId() {
+        return this.element.getContextId();
     }
 
-    public String getGatewayServiceId() {
-        return gatewayServiceId;
+    public String getGatewayId() {
+        return this.element.getGatewayId();
     }
 
-    public Map<String, InternalServiceHandler<?>> getEventsHandlerMap() {
+    public Map<String, InternalMessageHandler<?>> getEventsHandlerMap() {
         return eventsHandlerMap;
     }
 
-    public I getServiceInstance() {
-        return serviceInstance;
+    public I getElementInstance() {
+        return elementInstance;
     }
 
-    public Class<I> getInstanceClass() {
-        return instanceClass;
+    public Class<I> getElementInstanceClass() {
+        return this.element.getInstanceableClass();
     }
 
-    class InternalServiceHandler<T> implements IGatewayMessageHandler<T> {
+    public InternalElement<I> getElement() {
+        return this.element;
+    }
+
+    class InternalMessageHandler<T> implements IGatewayMessageHandler<T> {
 
         final boolean reflection;
 
@@ -113,7 +166,7 @@ public class AbstractGateway<I> implements IGateway {
 
         final IGatewayMessageHandler<T> handler;
 
-        public InternalServiceHandler(final String event, final Class<T> messageType, final Method method) {
+        public InternalMessageHandler(final String event, final Class<T> messageType, final Method method) {
             this.reflection = true;
             this.event = event;
             this.messageType = messageType;
@@ -121,7 +174,7 @@ public class AbstractGateway<I> implements IGateway {
             this.handler = null;
         }
 
-        public InternalServiceHandler(final String event, final IGatewayMessageHandler<T> handler) {
+        public InternalMessageHandler(final String event, final IGatewayMessageHandler<T> handler) {
             this.reflection = false;
             this.event = event;
             this.handler = handler;
@@ -135,29 +188,27 @@ public class AbstractGateway<I> implements IGateway {
             GatewayClientSession newSession = new GatewayClientSession(AbstractGateway.this,
                     (GatewayClientSession) clientSession);
             if (this.reflection) {
-                method.invoke(AbstractGateway.this.serviceInstance, new GatewayMessageContext<>(message, newSession));
+                method.invoke(AbstractGateway.this.elementInstance, new GatewayMessageContext<>(message, newSession));
             } else {
                 this.handler.onMessage(message, newSession);
             }
         }
-    }
 
-    @Override
-    public String toString() {
-        StringBuilder builder = new StringBuilder();
-        builder.append("AbstractGateway [gateway=");
-        builder.append(gateway);
-        builder.append(", serviceId=");
-        builder.append(serviceId);
-        builder.append(", gatewayServiceId=");
-        builder.append(gatewayServiceId);
-        builder.append(", eventsHandlerMap=");
-        builder.append(eventsHandlerMap);
-        builder.append(", serviceInstance=");
-        builder.append(serviceInstance);
-        builder.append(", instanceClass=");
-        builder.append(instanceClass);
-        builder.append("]");
-        return builder.toString();
+        @Override
+        public String toString() {
+            StringBuilder builder = new StringBuilder();
+            builder.append("InternalMessageHandler [reflection=");
+            builder.append(reflection);
+            builder.append(", event=");
+            builder.append(event);
+            builder.append(", messageType=");
+            builder.append(messageType);
+            builder.append(", method=");
+            builder.append(method);
+            builder.append(", handler=");
+            builder.append(handler);
+            builder.append("]");
+            return builder.toString();
+        }
     }
 }

@@ -13,13 +13,28 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package cl.io.gateway;
+package cl.io.gateway.plugin;
 
-import cl.io.gateway.service.IGatewayService;
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Inherited;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
 
-public class InternalService extends InternalElement<IGatewayService> {
+/**
+ * Annotation that allows services to invoke in a field the use of a gateway
+ * plugin.
+ * 
+ * @author egacl
+ *
+ */
+@Inherited
+@Target(ElementType.FIELD)
+@Retention(RetentionPolicy.RUNTIME)
+public @interface GatewayPlugin {
 
-    public InternalService(String contextId, Class<IGatewayService> serviceClass, String gatewayId) {
-        super(contextId, serviceClass, gatewayId);
-    }
+    /**
+     * @return Plugin unique identifier
+     */
+    String value();
 }

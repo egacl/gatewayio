@@ -15,11 +15,26 @@
  */
 package cl.io.gateway;
 
-import cl.io.gateway.service.IGatewayService;
+import cl.io.gateway.plugin.IGatewayPluginBootstrap;
 
-public class InternalService extends InternalElement<IGatewayService> {
+public class InternalPlugin extends InternalElement<IGatewayPluginBootstrap> {
 
-    public InternalService(String contextId, Class<IGatewayService> serviceClass, String gatewayId) {
+    private final String description;
+
+    private final Class<?> pluginType;
+
+    public InternalPlugin(String description, Class<?> pluginType, String contextId,
+            Class<IGatewayPluginBootstrap> serviceClass, String gatewayId) {
         super(contextId, serviceClass, gatewayId);
+        this.description = description;
+        this.pluginType = pluginType;
+    }
+
+    public String getDescription() {
+        return description;
+    }
+
+    public Class<?> getPluginType() {
+        return pluginType;
     }
 }

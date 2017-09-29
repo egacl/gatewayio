@@ -82,12 +82,12 @@ public class NetworkServiceManager implements IGatewayNetworkService, IAuthentic
     /**
      * Servicio de autenticacion de sesiones.
      */
-    private final InternalAuthenticationService authenticationService;
+    private final InternalGatewayAuthenticationService authenticationService;
 
     private final NetworkServiceSource origin;
 
     public NetworkServiceManager(final Gateway gateway, NetworkConfiguration clientNetConf,
-            InternalAuthenticationService authenticationService) {
+            InternalGatewayAuthenticationService authenticationService) {
         this.gateway = gateway;
         this.networkService = new NetworkService(clientNetConf);
         this.authenticationService = authenticationService;

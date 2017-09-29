@@ -13,13 +13,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package cl.io.gateway;
+package cl.io.gateway.plugin.hikaricp;
 
-import cl.io.gateway.service.IGatewayService;
+import javax.sql.DataSource;
 
-public class InternalService extends InternalElement<IGatewayService> {
+public interface IHikariDataSourceManager {
 
-    public InternalService(String contextId, Class<IGatewayService> serviceClass, String gatewayId) {
-        super(contextId, serviceClass, gatewayId);
-    }
+    DataSource getDataSource(String name);
 }
